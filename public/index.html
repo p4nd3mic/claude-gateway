@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Claude Gateway</title>
+    <link rel="stylesheet" href="/vendor/xterm.css" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header class="app__header">
+        <div>
+          <div class="app__title">Claude Gateway</div>
+          <div class="app__subtitle">Voice-first terminal control</div>
+        </div>
+        <div class="app__status" id="status">Connecting...</div>
+      </header>
+
+      <section class="terminal" id="terminal"></section>
+
+      <section class="controls">
+        <button class="mic" id="micButton" aria-label="Tap to talk">
+          <span id="micLabel">Tap to talk</span>
+        </button>
+        <div class="actions">
+          <button type="button" id="imageButton">Image</button>
+          <input type="file" id="imageInput" accept="image/*" capture="environment" />
+        </div>
+        <div class="nav">
+          <button type="button" id="escButton">Esc</button>
+          <button type="button" id="upButton">↑</button>
+          <button type="button" id="downButton">↓</button>
+        </div>
+        <form class="input" id="inputForm">
+          <input
+            id="textInput"
+            type="text"
+            placeholder="Type or use voice"
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <button type="button" id="enterButton">Enter</button>
+          <button type="submit">Send</button>
+        </form>
+      </section>
+    </main>
+
+    <script src="/vendor/xterm.js"></script>
+    <script src="/vendor/xterm-addon-fit.js"></script>
+    <script src="/app.js"></script>
+  </body>
+</html>
