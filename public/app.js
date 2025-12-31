@@ -42,6 +42,10 @@ const sessionId =
   params.get('session') ||
   `s-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 const forceWebSocket = params.get('transport') === 'ws' || params.get('ws') === '1';
+const apiKey = params.get('key') || localStorage.getItem('gateway_api_key') || '';
+if (apiKey) {
+  localStorage.setItem('gateway_api_key', apiKey);
+}
 
 if (!supportsRecording) {
   micButton.disabled = true;
@@ -54,7 +58,7 @@ if (!supportsSpeechRecognition) {
 
 function connect() {
   const protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  ws = new WebSocket(`${protocol}://${location.host}/ws?session=${encodeURIComponent(sessionId)}`);
+  ws = new WebSocket(`${protocol}://${location.host}/ws?session=${encodeURIComponent(sessionId)}&key=${encodeURIComponent(apiKey)}`);
 
   let fallbackTimer;
   if (!forceWebSocket) {
@@ -169,7 +173,7 @@ function startEventSource() {
   transportLabel = 'Connected (HTTP)';
   updateStatus();
 
-  eventSource = new EventSource(`/api/stream?session=${encodeURIComponent(sessionId)}`);
+  eventSource = new EventSource(`/api/stream?session=${encodeURIComponent(sessionId)}&key=${encodeURIComponent(apiKey)}`);
   eventSource.onmessage = (event) => {
     let message;
     try {

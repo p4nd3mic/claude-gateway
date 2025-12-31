@@ -60,3 +60,45 @@ logs:
     echo "  1. just tailscale-daemon"
     echo "  2. just start"
     echo "  3. just tailscale-serve"
+
+# ─────────────────────────────────────────────────────────────────
+# LAUNCHD SERVICE MANAGEMENT (Auto-start & Auto-restart)
+# ─────────────────────────────────────────────────────────────────
+
+# Setup as launchd service (runs on boot, auto-restarts)
+service-setup:
+    ./setup-launchd.sh
+
+# Check service status
+service-status:
+    @launchctl list | grep -E "PID|claude-gateway" || echo "Service not running"
+    @echo ""
+    @echo "Recent logs:"
+    @tail -5 ~/Library/Logs/claude-gateway/stdout.log 2>/dev/null || echo "No logs yet"
+
+# Stop the launchd service
+service-stop:
+    launchctl unload ~/Library/LaunchAgents/com.lifeos.claude-gateway.plist
+
+# Start the launchd service
+service-start:
+    launchctl load ~/Library/LaunchAgents/com.lifeos.claude-gateway.plist
+
+# Restart the launchd service
+service-restart:
+    launchctl unload ~/Library/LaunchAgents/com.lifeos.claude-gateway.plist 2>/dev/null || true
+    launchctl load ~/Library/LaunchAgents/com.lifeos.claude-gateway.plist
+
+# View service logs (stdout)
+service-logs:
+    tail -f ~/Library/Logs/claude-gateway/stdout.log
+
+# View service errors
+service-errors:
+    tail -f ~/Library/Logs/claude-gateway/stderr.log
+
+# Uninstall the service
+service-uninstall:
+    launchctl unload ~/Library/LaunchAgents/com.lifeos.claude-gateway.plist 2>/dev/null || true
+    rm -f ~/Library/LaunchAgents/com.lifeos.claude-gateway.plist
+    @echo "Service uninstalled"

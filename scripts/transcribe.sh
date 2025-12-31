@@ -8,6 +8,7 @@ fi
 
 INPUT="$1"
 TMP_DIR="$(mktemp -d)"
+trap "rm -rf $TMP_DIR" EXIT
 WAV="$TMP_DIR/audio.wav"
 
 FFMPEG_BIN="${FFMPEG_BIN:-ffmpeg}"

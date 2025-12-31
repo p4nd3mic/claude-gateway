@@ -8,6 +8,7 @@
     "start": "node server.js"
   },
   "dependencies": {
+    "chokidar": "^5.0.0",
     "dotenv": "^16.4.5",
     "express": "^4.21.2",
     "multer": "^1.4.5-lts.1",
