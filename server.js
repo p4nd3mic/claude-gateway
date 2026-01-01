@@ -31,8 +31,10 @@ const CODEX_SANDBOX_MODE = process.env.CODEX_SANDBOX_MODE || 'workspace-write';
 const CODEX_APPROVAL_POLICY = process.env.CODEX_APPROVAL_POLICY || 'never';
 const CODEX_BIN = process.env.CODEX_BIN || 'codex';
 // Default model for new Codex sessions + runs (override via env).
-// Note: Codex CLI (ChatGPT subscription login) supports the gpt-5.2-codex-* family.
-const CODEX_MODEL = process.env.CODEX_MODEL || 'gpt-5.2-codex-low';
+// We store a friendly selection like "gpt-5.2-low" and translate it into Codex CLI config
+// (`model` + `model_reasoning_effort`) when spawning `codex exec`.
+const CODEX_MODEL = process.env.CODEX_MODEL || 'gpt-5.2-low';
+const CODEX_REASONING_EFFORT = process.env.CODEX_REASONING_EFFORT || 'low';
 const CODEX_MODELS = process.env.CODEX_MODELS || '';
 
 function parseCorsOrigins(raw) {
@@ -111,6 +113,10 @@ function parseCodexModels(raw) {
   if (!trimmed) {
     // Defaults intended for fast "driving mode" model switching.
     return [
+      'gpt-5.2-low',
+      'gpt-5.2-medium',
+      'gpt-5.2-high',
+      'gpt-5.2-xhigh',
       'gpt-5.2-codex-low',
       'gpt-5.2-codex-medium',
       'gpt-5.2-codex-high',
@@ -131,6 +137,53 @@ function formatModelLabel(model) {
     .replace(/^gpt-/, '')
     .replace(/-codex-/g, ' codex ')
     .replace(/-/g, ' ');
+}
+
+function parseReasoningEffort(value) {
+  const raw = String(value || '').trim().toLowerCase();
+  if (!raw) return null;
+  if (raw === 'low' || raw === 'medium' || raw === 'high') return raw;
+  if (raw === 'xhigh' || raw === 'extra_high' || raw === 'extra-high' || raw === 'extra high') return 'extra_high';
+  return null;
+}
+
+function normalizeCodexModelSelection(selection) {
+  const raw = String(selection || '').trim();
+  if (!raw) return null;
+
+  // Accept friendly "gpt-5.2-low" naming (and codex variant) and translate to CLI config.
+  // Examples:
+  // - gpt-5.2-low => model=gpt-5.2, effort=low
+  // - gpt-5.2-xhigh => model=gpt-5.2, effort=extra_high
+  // - gpt-5.2-codex-medium => model=gpt-5.2-codex, effort=medium
+  const m = raw.match(/^(gpt-5\.2(?:-codex)?)(?:-(low|medium|high|xhigh))?$/i);
+  if (m) {
+    const baseModel = m[1].toLowerCase();
+    const suffix = (m[2] || '').toLowerCase();
+    const effort = parseReasoningEffort(suffix) || parseReasoningEffort(CODEX_REASONING_EFFORT) || 'low';
+    const labelSuffix = effort === 'extra_high' ? 'xhigh' : effort;
+    const label = suffix ? raw : `${baseModel}-${labelSuffix}`;
+    return { kind: 'config', model: baseModel, effort, label };
+  }
+
+  // Fallback: treat as literal model string.
+  return { kind: 'model', model: raw, label: raw };
+}
+
+function buildCodexModelArgs(selection) {
+  const normalized = normalizeCodexModelSelection(selection);
+  if (!normalized) return [];
+
+  if (normalized.kind === 'config') {
+    return [
+      '-c',
+      `model="${normalized.model}"`,
+      '-c',
+      `model_reasoning_effort="${normalized.effort}"`,
+    ];
+  }
+
+  return ['--model', normalized.model];
 }
 
 server.on('connection', (socket) => {
@@ -1091,7 +1144,7 @@ function startNextCodexTurn(sessionId) {
     sessionMeta.cwd || WORKDIR,
     '--sandbox',
     CODEX_SANDBOX_MODE,
-    ...(sessionMeta.model || CODEX_MODEL ? ['--model', (sessionMeta.model || CODEX_MODEL)] : []),
+    ...(sessionMeta.model || CODEX_MODEL ? buildCodexModelArgs(sessionMeta.model || CODEX_MODEL) : []),
     turn.prompt,
   ];
 
@@ -1298,15 +1351,25 @@ app.post('/api/codex/sessions/:sessionId/messages', (req, res) => {
         const current = sessionMeta.model || CODEX_MODEL || '(default)';
         appendAssistantText(`Current model: ${current}\n\nUse: /model <name> or /models`);
       } else {
-        sessionMeta.model = requested;
+        const normalized = normalizeCodexModelSelection(requested);
+        const nextModel = normalized?.label || requested;
+
+        if (modelList.length && !modelList.includes(nextModel)) {
+          appendAssistantText(
+            `Unknown model: ${requested}\n\n` +
+            `Use: /models to see available options.`
+          );
+        } else {
+          sessionMeta.model = nextModel;
         try {
-          const updated = { ...sessionMeta, model: requested };
+          const updated = { ...sessionMeta, model: nextModel };
           const { writeSessionMeta: writeCodexSessionMeta } = require('./lib/codex-stream');
           writeCodexSessionMeta(sessionId, updated);
         } catch {
           // Ignore
         }
-        appendAssistantText(`Model set to: ${requested}`);
+          appendAssistantText(`Model set to: ${nextModel}`);
+        }
       }
     }
 
