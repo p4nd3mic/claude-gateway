@@ -28,7 +28,8 @@ const SESSION_TTL_MS = Number(process.env.GATEWAY_SESSION_TTL_HOURS || 4) * 60 *
 const IDLE_TIMEOUT_MS = Number(process.env.GATEWAY_IDLE_TIMEOUT_MINS || 30) * 60 * 1000;
 const CORS_ORIGINS_RAW = process.env.GATEWAY_CORS_ORIGINS || '';
 const CODEX_SANDBOX_MODE = process.env.CODEX_SANDBOX_MODE || 'workspace-write';
-const CODEX_APPROVAL_POLICY = process.env.CODEX_APPROVAL_POLICY || 'never';
+// Use broad approvals by default (still sandboxed unless CODEX_SANDBOX_MODE is changed).
+const CODEX_APPROVAL_POLICY = process.env.CODEX_APPROVAL_POLICY || 'on-failure';
 const CODEX_BIN = process.env.CODEX_BIN || 'codex';
 // Default model for new Codex sessions + runs (override via env).
 // We store a friendly selection like "gpt-5.2-low" and translate it into Codex CLI config
