@@ -31,7 +31,8 @@ const CODEX_SANDBOX_MODE = process.env.CODEX_SANDBOX_MODE || 'workspace-write';
 const CODEX_APPROVAL_POLICY = process.env.CODEX_APPROVAL_POLICY || 'never';
 const CODEX_BIN = process.env.CODEX_BIN || 'codex';
 // Default model for new Codex sessions + runs (override via env).
-const CODEX_MODEL = process.env.CODEX_MODEL || 'gpt-5.2-low';
+// Note: Codex CLI (ChatGPT subscription login) supports the gpt-5.2-codex-* family.
+const CODEX_MODEL = process.env.CODEX_MODEL || 'gpt-5.2-codex-low';
 const CODEX_MODELS = process.env.CODEX_MODELS || '';
 
 function parseCorsOrigins(raw) {
@@ -110,10 +111,6 @@ function parseCodexModels(raw) {
   if (!trimmed) {
     // Defaults intended for fast "driving mode" model switching.
     return [
-      'gpt-5.2-low',
-      'gpt-5.2-medium',
-      'gpt-5.2-high',
-      'gpt-5.2-xhigh',
       'gpt-5.2-codex-low',
       'gpt-5.2-codex-medium',
       'gpt-5.2-codex-high',
