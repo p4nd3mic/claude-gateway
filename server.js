@@ -36,6 +36,7 @@ const CODEX_BIN = process.env.CODEX_BIN || 'codex';
 const CODEX_MODEL = process.env.CODEX_MODEL || 'gpt-5.2-low';
 const CODEX_REASONING_EFFORT = process.env.CODEX_REASONING_EFFORT || 'low';
 const CODEX_MODELS = process.env.CODEX_MODELS || '';
+const CODEX_ENABLE_SEARCH = (process.env.CODEX_ENABLE_SEARCH || 'true').toLowerCase() === 'true';
 
 function parseCorsOrigins(raw) {
   return raw
@@ -1135,6 +1136,7 @@ function startNextCodexTurn(sessionId) {
   }
 
   const args = [
+    ...(CODEX_ENABLE_SEARCH ? ['--search'] : []),
     '-a',
     CODEX_APPROVAL_POLICY,
     'exec',
