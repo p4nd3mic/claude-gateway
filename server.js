@@ -30,7 +30,8 @@ const CORS_ORIGINS_RAW = process.env.GATEWAY_CORS_ORIGINS || '';
 const CODEX_SANDBOX_MODE = process.env.CODEX_SANDBOX_MODE || 'workspace-write';
 const CODEX_APPROVAL_POLICY = process.env.CODEX_APPROVAL_POLICY || 'never';
 const CODEX_BIN = process.env.CODEX_BIN || 'codex';
-const CODEX_MODEL = process.env.CODEX_MODEL || '';
+// Default model for new Codex sessions + runs (override via env).
+const CODEX_MODEL = process.env.CODEX_MODEL || 'gpt-5.2-low';
 const CODEX_MODELS = process.env.CODEX_MODELS || '';
 
 function parseCorsOrigins(raw) {
@@ -214,12 +215,13 @@ function emitCodexSessionMetaUpdate(sessionId) {
     const writer = createCodexEventWriter(sessionId);
     const isActive = activeCodexRuns.has(sessionId);
     const queueLength = (codexQueueBySession.get(sessionId) || []).length;
+    const effectiveModel = meta.model || CODEX_MODEL || '';
 
     writer.append('session_meta', {
       provider: 'codex',
       sessionId,
       cwd: meta.cwd,
-      model: meta.model || '',
+      model: effectiveModel,
       latestThreadId: meta.latestThreadId || '',
       usage: meta.usage || null,
       contextInfo: meta.contextInfo || null,
