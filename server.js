@@ -31,6 +31,9 @@ const CODEX_SANDBOX_MODE = process.env.CODEX_SANDBOX_MODE || 'workspace-write';
 // Use broad approvals by default (still sandboxed unless CODEX_SANDBOX_MODE is changed).
 const CODEX_APPROVAL_POLICY = process.env.CODEX_APPROVAL_POLICY || 'on-failure';
 const CODEX_BIN = process.env.CODEX_BIN || 'codex';
+// Use a gateway-owned CODEX_HOME so we can persist MCP config and other Codex state without
+// requiring write access to ~/.codex from sandboxed environments.
+const CODEX_HOME = process.env.CODEX_HOME || path.join(os.homedir(), '.claude-gateway', 'codex-home');
 // Default model for new Codex sessions + runs (override via env).
 // We store a friendly selection like "gpt-5.2-low" and translate it into Codex CLI config
 // (`model` + `model_reasoning_effort`) when spawning `codex exec`.
@@ -95,6 +98,35 @@ if (!fs.existsSync(TMP_DIR)) {
 if (!fs.existsSync(UPLOAD_DIR)) {
   fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 }
+
+function ensureCodexHome() {
+  try {
+    fs.mkdirSync(CODEX_HOME, { recursive: true });
+  } catch (err) {
+    log('CODEX_HOME CREATE FAILED', { code: err.code, message: err.message, codexHome: CODEX_HOME });
+    return;
+  }
+
+  const targetAuthPath = path.join(CODEX_HOME, 'auth.json');
+  if (fs.existsSync(targetAuthPath)) return;
+
+  const defaultAuthPath = path.join(os.homedir(), '.codex', 'auth.json');
+  if (!fs.existsSync(defaultAuthPath)) return;
+
+  try {
+    fs.copyFileSync(defaultAuthPath, targetAuthPath);
+    log('CODEX_HOME AUTH COPIED', { from: defaultAuthPath, to: targetAuthPath });
+  } catch (err) {
+    log('CODEX_HOME AUTH COPY FAILED', {
+      code: err.code,
+      message: err.message,
+      from: defaultAuthPath,
+      to: targetAuthPath
+    });
+  }
+}
+
+ensureCodexHome();
 
 const app = express();
 const server = http.createServer(app);
@@ -1162,7 +1194,7 @@ function startNextCodexTurn(sessionId) {
   });
 
   const proc = spawn(CODEX_BIN, args, {
-    env: process.env,
+    env: { ...process.env, CODEX_HOME },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
 
